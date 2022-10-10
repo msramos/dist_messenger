@@ -1,0 +1,4 @@
+#!/bin/sh
+
+NODE_NAME="$1@0.0.0.0"
+iex --name $NODE_NAME --cookie 123456 -S mix
