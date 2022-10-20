@@ -57,9 +57,9 @@ defmodule Messenger.MessagingServer do
     end
   end
 
-  def handle_call({:send, recipient, message}, _from, state) do
+  def handle_call({:send, recipient, body}, _from, state) do
     private state do
-      send_message(recipient, message, state)
+      send_message(recipient, body, state)
     end
   end
 
@@ -69,7 +69,7 @@ defmodule Messenger.MessagingServer do
     end
   end
 
-  def handle_info({:msg, from, message}, %{inbox: inbox} = state) do
+  def handle_info({:msg, from, body}, %{inbox: inbox} = state) do
     case state[:notify_fun] do
       nil ->
         notify(from)
@@ -78,18 +78,21 @@ defmodule Messenger.MessagingServer do
         f.(from)
     end
 
-    {:noreply, Map.put(state, :inbox, [{from, message} | inbox])}
+    message = {from, body}
+    updated_state = %{state | inbox: [message | inbox]}
+
+    {:noreply, updated_state}
   end
 
-  defp send_message(recipient, message, state) do
+  defp send_message(recipient, body, state) do
     case :global.whereis_name({:user, recipient}) do
       :undefined ->
         {:reply, {:error, :recipient_not_found}, state}
 
       pid ->
-        send(pid, {:msg, state[:user], message})
+        send(pid, {:msg, state[:user], body})
 
-        sent = [{recipient, message} | state[:sent]]
+        sent = [{recipient, body} | state[:sent]]
         {:reply, :ok, Map.put(state, :sent, sent)}
     end
   end
